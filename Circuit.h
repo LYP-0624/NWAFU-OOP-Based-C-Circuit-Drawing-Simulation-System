@@ -12,6 +12,7 @@ namespace CircuitSim {
 class Component;
 class Node;
 class Port;
+class MNASolver;
 
 class Circuit {
 private:
@@ -20,6 +21,10 @@ private:
     int nextComponentId_;
     int nextNodeId_;
     bool solved_;
+    MNASolver* solver_;
+
+    void buildConnectivityGraph();
+    void assignGroundNode();
 
 public:
     Circuit();
@@ -37,10 +42,10 @@ public:
 
     bool solve();
     bool isSolved() const { return solved_; }
-    std::vector<<SimulationResult> getResults() const;
+    std::vector<SimulationResult> getResults() const;
 
     SimulationResult queryById(int id) const;
-    std::vector<<SimulationResult> queryByType(const std::string& type) const;
+    std::vector<SimulationResult> queryByType(const std::string& type) const;
 
     bool isValid() const;
     bool hasGround() const;

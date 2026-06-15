@@ -1,5 +1,7 @@
 #include "Bulb.h"
 #include "ComponentFactory.h"
+#include "Port.h"
+
 
 namespace CircuitSim {
 

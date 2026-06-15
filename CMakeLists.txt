@@ -3,7 +3,6 @@ project(CircuitSim)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# 所有源文件
 set(SOURCES
     main.cpp
     Component.cpp
@@ -11,6 +10,7 @@ set(SOURCES
     Node.cpp
     Circuit.cpp
     LinearSolver.cpp
+    MNASolver.cpp
     ComponentFactory.cpp
     Resistor.cpp
     PowerSource.cpp

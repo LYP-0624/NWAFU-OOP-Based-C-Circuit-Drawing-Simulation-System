@@ -25,7 +25,7 @@ protected:
     double x_, y_;
     double rotation_;
     bool selected_;
-    std::vector<<Port*> ports_;
+    std::vector<Port*> ports_;
     std::map<std::string, double> properties_;
 
 public:
@@ -48,8 +48,8 @@ public:
     bool isSelected() const { return selected_; }
     void setSelected(bool s) { selected_ = s; }
     
-    std::vector<<Port*>& getPorts() { return ports_; }
-    const std::vector<<Port*>& getPorts() const { return ports_; }
+    std::vector<Port*>& getPorts() { return ports_; }
+    const std::vector<Port*>& getPorts() const { return ports_; }
     
     void addPort(Port* port);
     

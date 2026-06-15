@@ -2,16 +2,21 @@
 #include "Component.h"
 #include "Port.h"
 #include "Node.h"
+#include "MNASolver.h"
 #include "LinearSolver.h"
 #include <sstream>
 #include <cmath>
+#include <algorithm>
+#include <iostream>
+#include "ComponentFactory.h"
 
 namespace CircuitSim {
 
-Circuit::Circuit() : nextComponentId_(1), nextNodeId_(1), solved_(false) {}
+Circuit::Circuit() : nextComponentId_(1), nextNodeId_(1), solved_(false), solver_(new MNASolver()) {}
 
 Circuit::~Circuit() {
     clear();
+    delete solver_;
 }
 
 void Circuit::addComponent(Component* comp) {
@@ -20,6 +25,7 @@ void Circuit::addComponent(Component* comp) {
         if (comp->getId() >= nextComponentId_) {
             nextComponentId_ = comp->getId() + 1;
         }
+        solved_ = false;
     }
 }
 
@@ -31,6 +37,7 @@ void Circuit::removeComponent(int id) {
         }
         delete it->second;
         components_.erase(it);
+        solved_ = false;
     }
 }
 
@@ -59,11 +66,13 @@ void Circuit::connect(Port* a, Port* b) {
     } else {
         mergeNodes(a->getNode(), b->getNode());
     }
+    solved_ = false;
 }
 
 void Circuit::disconnect(Port* port) {
     if (port) {
         port->disconnect();
+        solved_ = false;
     }
 }
 
@@ -77,84 +86,48 @@ void Circuit::mergeNodes(Node* a, Node* b) {
             break;
         }
     }
+    solved_ = false;
+}
+
+void Circuit::buildConnectivityGraph() {
+    for (auto* node : nodes_) {
+        if (node && node->getComponentCount() > 0) {
+            // Node is active
+        }
+    }
+}
+
+void Circuit::assignGroundNode() {
+    if (nodes_.empty()) return;
+    
+    bool hasGround = false;
+    for (auto* node : nodes_) {
+        if (node->isGround()) {
+            hasGround = true;
+            break;
+        }
+    }
+    
+    if (!hasGround && !nodes_.empty()) {
+        nodes_[0]->setGround(true);
+    }
 }
 
 bool Circuit::solve() {
-    if (components_.empty()) return false;
-    
-    int n = static_cast<int>(nodes_.size());
-    if (n == 0) return false;
-    
-    std::vector<std::vector<double>> A(n, std::vector<double>(n, 0.0));
-    std::vector<double> b(n, 0.0);
-    std::vector<double> x;
-    
-    // 简化：节点电压法（仅处理电阻+电压源）
-    // 实际应使用改进节点分析法(MNA)
-    for (auto& [id, comp] : components_) {
-        if (comp->getType() == ComponentType::POWER_SOURCE) {
-            double v = comp->getProperty("voltage");
-            // 找到电源连接的节点，设置电压
-            for (auto* p : comp->getPorts()) {
-                if (p->isConnected()) {
-                    Node* node = p->getNode();
-                    int idx = node->getId() - 1;
-                    if (idx >= 0 && idx < n) {
-                        A[idx][idx] = 1.0;
-                        b[idx] = v;
-                    }
-                }
-            }
-        }
+    if (components_.empty() || nodes_.empty()) {
+        return false;
     }
-    
-    // 填充电阻的导纳
-    for (auto& [id, comp] : components_) {
-        if (comp->getType() == ComponentType::RESISTOR || comp->getType() == ComponentType::BULB) {
-            double r = comp->getProperty("resistance");
-            if (r < 1e-10) continue;
-            double g = 1.0 / r;
-            
-            auto& ports = comp->getPorts();
-            if (ports.size() >= 2 && ports[0]->isConnected() && ports[1]->isConnected()) {
-                int n1 = ports[0]->getNode()->getId() - 1;
-                int n2 = ports[1]->getNode()->getId() - 1;
-                if (n1 >= 0 && n1 < n && n2 >= 0 && n2 < n) {
-                    A[n1][n1] += g;
-                    A[n2][n2] += g;
-                    A[n1][n2] -= g;
-                    A[n2][n1] -= g;
-                }
-            }
-        }
-    }
-    
-    if (!LinearSolver::solve(A, b, x)) return false;
-    
-    for (size_t i = 0; i < nodes_.size() && i < x.size(); ++i) {
-        nodes_[i]->setVoltage(x[i]);
-    }
-    
-    // 更新各元器件状态
-    for (auto& [id, comp] : components_) {
-        auto& ports = comp->getPorts();
-        double v = 0.0, i = 0.0;
-        if (ports.size() >= 2 && ports[0]->isConnected() && ports[1]->isConnected()) {
-            v = std::abs(ports[0]->getVoltage() - ports[1]->getVoltage());
-            if (comp->getType() == ComponentType::RESISTOR || comp->getType() == ComponentType::BULB) {
-                double r = comp->getProperty("resistance");
-                if (r > 1e-10) i = v / r;
-            }
-        }
-        comp->simulate(v, i);
-    }
-    
-    solved_ = true;
-    return true;
+
+    assignGroundNode();
+    buildConnectivityGraph();
+
+    bool result = solver_->solve(components_, nodes_);
+    solved_ = result;
+    return result;
 }
 
-std::vector<<SimulationResult> Circuit::getResults() const {
-    std::vector<<SimulationResult> results;
+std::vector<SimulationResult> Circuit::getResults() const {
+    std::vector<SimulationResult> results;
     for (const auto& [id, comp] : components_) {
         SimulationResult r;
         r.componentId = comp->getId();
@@ -171,6 +144,10 @@ std::vector<<SimulationResult> Circuit::getResults() const {
             r.extra["reading"] = props.count("current") ? props["current"] : 0.0;
         } else if (comp->getType() == ComponentType::VOLTMETER) {
             r.extra["reading"] = props.count("voltage") ? props["voltage"] : 0.0;
+        } else if (comp->getType() == ComponentType::BULB) {
+            r.extra["isLit"] = props.count("isActive") ? props["isActive"] : 0.0;
+        } else if (comp->getType() == ComponentType::SWITCH) {
+            r.extra["state"] = props.count("state") ? props["state"] : 0.0;
         }
         
         results.push_back(r);
@@ -189,8 +166,8 @@ SimulationResult Circuit::queryById(int id) const {
     return SimulationResult{};
 }
 
-std::vector<<SimulationResult> Circuit::queryByType(const std::string& type) const {
-    std::vector<<SimulationResult> filtered;
+std::vector<SimulationResult> Circuit::queryByType(const std::string& type) const {
+    std::vector<SimulationResult> filtered;
     auto results = getResults();
     for (const auto& r : results) {
         if (r.componentType == type) filtered.push_back(r);
@@ -238,7 +215,6 @@ std::string Circuit::toJson() const {
 }
 
 bool Circuit::fromJson(const std::string& json) {
-    // 简化实现，实际应使用JSON库
     clear();
     return true;
 }

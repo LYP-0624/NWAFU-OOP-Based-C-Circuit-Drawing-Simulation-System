@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <functional>
+#include "Component.h"
 
 namespace CircuitSim {
 
@@ -11,7 +12,7 @@ class Component;
 
 class ComponentFactory {
 public:
-    using Creator = std::function<<Component*(int id, double x, double y)>;
+    using Creator = std::function<Component*(int id, double x, double y)>;
 
     static ComponentFactory& getInstance();
 

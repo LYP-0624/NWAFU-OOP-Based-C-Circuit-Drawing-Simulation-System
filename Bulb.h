@@ -24,6 +24,8 @@ public:
     Component* clone() const override;
 
     bool isLit() const { return isLit_; }
+    double getResistance() const { return resistance_; }
+    void setResistance(double r) { resistance_ = r; }
 };
 
 } // namespace CircuitSim
