@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGraphicsView" name="circuitView"/>
+    </item>
+    <item>
+     <widget class="QWidget" name="toolBarWidget" native="true">
+      <property name="styleSheet">
+       <string notr="true">/* 默认按钮长相：圆角、淡灰底色、精致边框 */
+QPushButton {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #495057;
+    font-weight: bold;
+    font-family: &quot;Microsoft YaHei&quot;;
+}
+
+/* 鼠标路过时的魔法：变成科技蓝底色，边框发光 */
+QPushButton:hover {
+    background-color: #e2eafc;
+    border: 1px solid #abc4ff;
+    color: #1d3557;
+}
+
+/* 鼠标按下去的瞬间：颜色加深，体现物理按压感 */
+QPushButton:pressed {
+    background-color: #ccdbfd;
+    border: 1px solid #7b9acc;
+}</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QPushButton" name="btnPower">
+         <property name="text">
+          <string>btnPower</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnAmmeter">
+         <property name="text">
+          <string>btnAmmeter</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnBulb">
+         <property name="text">
+          <string>btnBulb</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="capacitor">
+         <property name="text">
+          <string>capacitor</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="inductor">
+         <property name="text">
+          <string>inductor</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="ground">
+         <property name="text">
+          <string>ground</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnResistor">
+         <property name="text">
+          <string>btnResistor</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="switch1">
+         <property name="text">
+          <string>switch1</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnVoltmeter">
+         <property name="text">
+          <string>btnVoltmeter</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>17</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
