@@ -4,9 +4,22 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <fstream>
+#include <chrono>
 #include "SimulationResult.h"
 
 namespace CircuitSim {
+
+class Component;
+class Circuit;
+
+enum class LogLevel {
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    FATAL
+};
 
 class SimulationLogger {
 public:
@@ -22,6 +35,17 @@ public:
     void logSimulation(const std::vector<SimulationResult>& results, 
                        const std::string& description = "");
     
+    void log(LogLevel level, const std::string& message);
+    void logInfo(const std::string& message) { log(LogLevel::INFO, message); }
+    void logDebug(const std::string& message) { log(LogLevel::DEBUG, message); }
+    void logWarn(const std::string& message) { log(LogLevel::WARNING, message); }
+    void logError(const std::string& message) { log(LogLevel::ERROR, message); }
+    void logFatal(const std::string& message) { log(LogLevel::FATAL, message); }
+    
+    void logSimulationStep(const std::string& step_description);
+    void logComponentState(const Component* component);
+    void logCircuitState(const Circuit* circuit);
+    
     void clear();
     
     size_t getLogCount() const;
@@ -35,6 +59,8 @@ public:
     std::vector<SimulationResult> getResultsById(int componentId) const;
     
     std::vector<double> getHistory(int componentId, const std::string& property) const;
+    
+    std::string getLog() const;
 
 private:
     SimulationLogger() : nextSimulationId_(1), lastTimestamp_(0.0) {}
@@ -42,6 +68,9 @@ private:
     int nextSimulationId_;
     double lastTimestamp_;
     std::vector<LogEntry> logs_;
+    std::ofstream logFile_;
+    bool fileOpened_ = false;
+    void ensureLogFile();
 };
 
 } // namespace CircuitSim

@@ -1,5 +1,10 @@
 #include "CircuitValidator.h"
 #include "Port.h"
+#include "Resistor.h"
+#include "Bulb.h"
+#include "PowerSource.h"
+#include "Capacitor.h"
+#include "Inductor.h"
 #include <set>
 #include <queue>
 
@@ -179,7 +184,7 @@ bool CircuitValidator::validateComponents(const std::unordered_map<int, Componen
         
         switch (comp->getType()) {
             case ComponentType::RESISTOR: {
-                double r = comp->getProperty("resistance");
+                double r = static_cast<Resistor*>(comp)->getResistance();
                 if (r <= 0) {
                     warnings.push_back("电阻 " + std::to_string(comp->getId()) 
                                      + " 的阻值无效: " + std::to_string(r) + " Ω");
@@ -189,7 +194,7 @@ bool CircuitValidator::validateComponents(const std::unordered_map<int, Componen
             }
             
             case ComponentType::BULB: {
-                double r = comp->getProperty("resistance");
+                double r = static_cast<Bulb*>(comp)->getResistance();
                 if (r <= 0) {
                     warnings.push_back("灯泡 " + std::to_string(comp->getId()) 
                                      + " 的电阻值无效: " + std::to_string(r) + " Ω");
@@ -199,7 +204,7 @@ bool CircuitValidator::validateComponents(const std::unordered_map<int, Componen
             }
             
             case ComponentType::POWER_SOURCE: {
-                double value = comp->getProperty("value");
+                double value = static_cast<PowerSource*>(comp)->getValue();
                 if (value <= 0) {
                     warnings.push_back("电源 " + std::to_string(comp->getId()) 
                                      + " 的值无效: " + std::to_string(value));
@@ -209,7 +214,7 @@ bool CircuitValidator::validateComponents(const std::unordered_map<int, Componen
             }
             
             case ComponentType::CAPACITOR: {
-                double c = comp->getProperty("capacitance");
+                double c = static_cast<Capacitor*>(comp)->getCapacitance();
                 if (c <= 0) {
                     warnings.push_back("电容 " + std::to_string(comp->getId()) 
                                      + " 的电容值无效: " + std::to_string(c) + " F");
@@ -219,7 +224,7 @@ bool CircuitValidator::validateComponents(const std::unordered_map<int, Componen
             }
             
             case ComponentType::INDUCTOR: {
-                double l = comp->getProperty("inductance");
+                double l = static_cast<Inductor*>(comp)->getInductance();
                 if (l <= 0) {
                     warnings.push_back("电感 " + std::to_string(comp->getId()) 
                                      + " 的电感值无效: " + std::to_string(l) + " H");

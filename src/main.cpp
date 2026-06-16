@@ -1,5 +1,7 @@
 #include <iostream>
 #include <iomanip>
+#include <string>
+#include <limits>
 #include "../include/Circuit.h"
 #include "../include/Resistor.h"
 #include "../include/PowerSource.h"
@@ -12,235 +14,233 @@
 #include "../include/SimulationLogger.h"
 
 void printResults(const std::vector<CircuitSim::SimulationResult>& results) {
-    std::cout << "\n=== Simulation Results ===\n";
-    std::cout << std::setw(10) << "ID" 
-              << std::setw(15) << "Name" 
-              << std::setw(12) << "Type"
+    std::cout << "\n" << std::string(70, '=') << "\n";
+    std::cout << "                 Simulation Results\n";
+    std::cout << std::string(70, '=') << "\n";
+    std::cout << std::setw(8) << "ID" 
+              << std::setw(14) << "Name" 
+              << std::setw(14) << "Type"
               << std::setw(12) << "Voltage(V)"
               << std::setw(12) << "Current(A)"
               << std::setw(12) << "Power(W)"
-              << std::setw(10) << "Active"
+              << std::setw(10) << "Status"
               << std::endl;
-    std::cout << "-------------------------------------------------------------------------\n";
+    std::cout << std::string(70, '-') << "\n";
     
     for (const auto& r : results) {
-        std::cout << std::setw(10) << r.componentId
-                  << std::setw(15) << r.componentName
-                  << std::setw(12) << r.componentType
+        std::cout << std::setw(8) << r.componentId
+                  << std::setw(14) << r.componentName
+                  << std::setw(14) << r.componentType
                   << std::setw(12) << std::fixed << std::setprecision(4) << r.voltage
                   << std::setw(12) << std::fixed << std::setprecision(6) << r.current
                   << std::setw(12) << std::fixed << std::setprecision(4) << r.power
-                  << std::setw(10) << (r.isActive ? "Yes" : "No")
+                  << std::setw(10) << (r.isActive ? "Active" : "Inactive")
                   << std::endl;
     }
+    std::cout << std::string(70, '=') << "\n";
 }
 
-void testBasicCircuit() {
-    std::cout << "\n=== Test 1: Basic Series Circuit ===" << std::endl;
-    
-    CircuitSim::Circuit circuit;
-    
-    auto resistor = new CircuitSim::Resistor(1, 0, 0, 100.0);
-    auto source = new CircuitSim::PowerSource(2, 100, 0, 5.0);
-    auto bulb = new CircuitSim::Bulb(3, 200, 0, 10.0);
-    auto ground = new CircuitSim::Ground(4, 300, 0);
-    
-    circuit.addComponent(resistor);
-    circuit.addComponent(source);
-    circuit.addComponent(bulb);
-    circuit.addComponent(ground);
-    
-    circuit.connect(resistor->getPorts()[0], source->getPorts()[1]);
-    circuit.connect(resistor->getPorts()[1], bulb->getPorts()[0]);
-    circuit.connect(bulb->getPorts()[1], ground->getPorts()[0]);
-    circuit.connect(source->getPorts()[0], ground->getPorts()[0]);
-    
-    auto errors = circuit.validateCircuit();
-    if (!errors.empty()) {
-        std::cout << "Validation Errors:" << std::endl;
-        for (const auto& err : errors) {
-            std::cout << "  - " << err << std::endl;
-        }
-    } else {
-        std::cout << "Circuit validation passed!" << std::endl;
-    }
-    
-    if (circuit.solve()) {
-        auto results = circuit.getResults();
-        printResults(results);
-        
-        circuit.logSimulation("Basic series circuit test");
-    } else {
-        std::cout << "Simulation failed!" << std::endl;
-    }
-}
-
-void testRCircuit() {
-    std::cout << "\n=== Test 2: RC Circuit ===" << std::endl;
-    
-    CircuitSim::Circuit circuit;
-    
-    auto resistor = new CircuitSim::Resistor(1, 0, 0, 1000.0);
-    auto capacitor = new CircuitSim::Capacitor(2, 100, 0, 1e-6);
-    auto source = new CircuitSim::PowerSource(3, 200, 0, 10.0);
-    auto ground = new CircuitSim::Ground(4, 300, 0);
-    
-    circuit.addComponent(resistor);
-    circuit.addComponent(capacitor);
-    circuit.addComponent(source);
-    circuit.addComponent(ground);
-    
-    circuit.connect(source->getPorts()[0], resistor->getPorts()[0]);
-    circuit.connect(resistor->getPorts()[1], capacitor->getPorts()[0]);
-    circuit.connect(capacitor->getPorts()[1], ground->getPorts()[0]);
-    circuit.connect(source->getPorts()[1], ground->getPorts()[0]);
-    
-    if (circuit.solve()) {
-        auto results = circuit.getResults();
-        printResults(results);
-        
-        circuit.logSimulation("RC circuit test");
-    } else {
-        std::cout << "Simulation failed!" << std::endl;
-    }
-}
-
-void testRLCircuit() {
-    std::cout << "\n=== Test 3: RL Circuit ===" << std::endl;
-    
-    CircuitSim::Circuit circuit;
-    
-    auto resistor = new CircuitSim::Resistor(1, 0, 0, 10.0);
-    auto inductor = new CircuitSim::Inductor(2, 100, 0, 0.01);
-    auto source = new CircuitSim::PowerSource(3, 200, 0, 12.0);
-    auto ground = new CircuitSim::Ground(4, 300, 0);
-    
-    circuit.addComponent(resistor);
-    circuit.addComponent(inductor);
-    circuit.addComponent(source);
-    circuit.addComponent(ground);
-    
-    circuit.connect(source->getPorts()[0], resistor->getPorts()[0]);
-    circuit.connect(resistor->getPorts()[1], inductor->getPorts()[0]);
-    circuit.connect(inductor->getPorts()[1], ground->getPorts()[0]);
-    circuit.connect(source->getPorts()[1], ground->getPorts()[0]);
-    
-    if (circuit.solve()) {
-        auto results = circuit.getResults();
-        printResults(results);
-        
-        circuit.logSimulation("RL circuit test");
-    } else {
-        std::cout << "Simulation failed!" << std::endl;
-    }
-}
-
-void testSwitchCircuit() {
-    std::cout << "\n=== Test 4: Switch Circuit ===" << std::endl;
-    
-    CircuitSim::Circuit circuit;
-    
-    auto resistor = new CircuitSim::Resistor(1, 0, 0, 100.0);
-    auto bulb = new CircuitSim::Bulb(2, 100, 0, 5.0);
-    auto sw = new CircuitSim::Switch(3, 200, 0, false);
-    auto source = new CircuitSim::PowerSource(4, 300, 0, 5.0);
-    auto ground = new CircuitSim::Ground(5, 400, 0);
-    
-    circuit.addComponent(resistor);
-    circuit.addComponent(bulb);
-    circuit.addComponent(sw);
-    circuit.addComponent(source);
-    circuit.addComponent(ground);
-    
-    circuit.connect(source->getPorts()[0], resistor->getPorts()[0]);
-    circuit.connect(resistor->getPorts()[1], bulb->getPorts()[0]);
-    circuit.connect(bulb->getPorts()[1], sw->getPorts()[0]);
-    circuit.connect(sw->getPorts()[1], ground->getPorts()[0]);
-    circuit.connect(source->getPorts()[1], ground->getPorts()[0]);
-    
-    std::cout << "Switch OPEN:" << std::endl;
-    if (circuit.solve()) {
-        auto results = circuit.getResults();
-        printResults(results);
-    }
-    
-    std::cout << "\nClosing switch..." << std::endl;
-    sw->setState(true);
-    
-    if (circuit.solve()) {
-        auto results = circuit.getResults();
-        printResults(results);
-        
-        circuit.logSimulation("Switch closed test");
-    }
-}
-
-void testCircuitValidator() {
-    std::cout << "\n=== Test 5: Circuit Validator ===" << std::endl;
-    
-    CircuitSim::Circuit circuit;
-    
-    auto resistor = new CircuitSim::Resistor(1, 0, 0, 100.0);
-    auto bulb = new CircuitSim::Bulb(2, 100, 0, 5.0);
-    
-    circuit.addComponent(resistor);
-    circuit.addComponent(bulb);
-    
-    auto errors = circuit.validateCircuit();
-    std::cout << "Validation without ground and source:" << std::endl;
-    for (const auto& err : errors) {
-        std::cout << "  - " << err << std::endl;
-    }
-    
-    auto source = new CircuitSim::PowerSource(3, 200, 0, 5.0);
-    auto ground = new CircuitSim::Ground(4, 300, 0);
-    circuit.addComponent(source);
-    circuit.addComponent(ground);
-    
-    circuit.connect(source->getPorts()[0], resistor->getPorts()[0]);
-    circuit.connect(resistor->getPorts()[1], bulb->getPorts()[0]);
-    circuit.connect(bulb->getPorts()[1], ground->getPorts()[0]);
-    circuit.connect(source->getPorts()[1], ground->getPorts()[0]);
-    
-    errors = circuit.validateCircuit();
-    std::cout << "\nAfter adding ground and connecting:" << std::endl;
-    if (errors.empty()) {
-        std::cout << "  All validations passed!" << std::endl;
-    } else {
-        for (const auto& err : errors) {
-            std::cout << "  - " << err << std::endl;
-        }
-    }
-}
-
-void testSimulationLogger() {
-    std::cout << "\n=== Test 6: Simulation Logger ===" << std::endl;
-    
-    auto& logger = CircuitSim::SimulationLogger::getInstance();
-    
-    std::cout << "Number of logged simulations: " << logger.getLogCount() << std::endl;
-    
-    if (logger.getLogCount() > 0) {
-        std::cout << "\nExporting log to CSV..." << std::endl;
-        if (logger.exportCSV("simulation_log.csv")) {
-            std::cout << "Export successful!" << std::endl;
-        } else {
-            std::cout << "Export failed!" << std::endl;
-        }
-    }
+void clearInput() {
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
 int main() {
-    std::cout << "=== Circuit Simulation System - Enhanced Version ===" << std::endl;
+    std::cout << "\n" << std::string(70, '*') << "\n";
+    std::cout << "      Circuit Simulation System v1.0\n";
+    std::cout << std::string(70, '*') << "\n";
     
-    testBasicCircuit();
-    testRCircuit();
-    testRLCircuit();
-    testSwitchCircuit();
-    testCircuitValidator();
-    testSimulationLogger();
+    CircuitSim::Circuit circuit;
+    int nextId = 1;
     
-    std::cout << "\n=== All tests completed ===" << std::endl;
+    while (true) {
+        std::cout << "\n" << std::string(70, '-') << "\n";
+        std::cout << "[Main Menu]\n";
+        std::cout << "1. Add Component\n";
+        std::cout << "2. Connect Components\n";
+        std::cout << "3. Delete Component\n";
+        std::cout << "4. Run Simulation\n";
+        std::cout << "5. Validate Circuit\n";
+        std::cout << "6. View Circuit Info\n";
+        std::cout << "7. Export Log\n";
+        std::cout << "8. Exit\n";
+        std::cout << std::string(70, '-') << "\n";
+        std::cout << "Enter your choice (1-8): ";
+        
+        int choice;
+        std::cin >> choice;
+        clearInput();
+        
+        if (choice == 1) {
+            std::cout << "\n[Add Component]\n";
+            std::cout << "1. 电阻 (Resistor)\n";
+            std::cout << "2. 电源 (PowerSource)\n";
+            std::cout << "3. 灯泡 (Bulb)\n";
+            std::cout << "4. 开关 (Switch)\n";
+            std::cout << "5. 接地 (Ground)\n";
+            std::cout << "6. 电容 (Capacitor)\n";
+            std::cout << "7. 电感 (Inductor)\n";
+            std::cout << "Select component type (1-7): ";
+            
+            int type;
+            std::cin >> type;
+            clearInput();
+            
+            CircuitSim::Component* comp = nullptr;
+            switch (type) {
+                case 1: {
+                    double r;
+                    std::cout << "Enter resistance (Ohm): ";
+                    std::cin >> r;
+                    comp = new CircuitSim::Resistor(nextId++, 0, 0, r);
+                    break;
+                }
+                case 2: {
+                    double v;
+                    std::cout << "Enter voltage (Volt): ";
+                    std::cin >> v;
+                    comp = new CircuitSim::PowerSource(nextId++, 0, 0, v);
+                    break;
+                }
+                case 3: {
+                    double r;
+                    std::cout << "Enter bulb resistance (Ohm): ";
+                    std::cin >> r;
+                    comp = new CircuitSim::Bulb(nextId++, 0, 0, r);
+                    break;
+                }
+                case 4:
+                    comp = new CircuitSim::Switch(nextId++, 0, 0, false);
+                    break;
+                case 5:
+                    comp = new CircuitSim::Ground(nextId++, 0, 0);
+                    break;
+                case 6: {
+                    double c;
+                    std::cout << "Enter capacitance (Farad, e.g. 1e-6): ";
+                    std::cin >> c;
+                    comp = new CircuitSim::Capacitor(nextId++, 0, 0, c);
+                    break;
+                }
+                case 7: {
+                    double l;
+                    std::cout << "Enter inductance (Henry, e.g. 0.01): ";
+                    std::cin >> l;
+                    comp = new CircuitSim::Inductor(nextId++, 0, 0, l);
+                    break;
+                }
+                default:
+                    std::cout << "Invalid choice!\n";
+                    continue;
+            }
+            
+            if (comp) {
+                circuit.addComponent(comp);
+                std::cout << "Component added successfully! ID: " << comp->getId() << "\n";
+            }
+        }
+        
+        else if (choice == 2) {
+            std::cout << "\n[Connect Components]\n";
+            int id1, port1, id2, port2;
+            std::cout << "Enter first component ID: ";
+            std::cin >> id1;
+            std::cout << "Enter first component port (0 or 1): ";
+            std::cin >> port1;
+            std::cout << "Enter second component ID: ";
+            std::cin >> id2;
+            std::cout << "输入第二个元件端口 (0或1): ";
+            std::cin >> port2;
+            clearInput();
+            
+            auto c1 = circuit.getComponent(id1);
+            auto c2 = circuit.getComponent(id2);
+            
+            if (c1 && c2) {
+                auto& ports1 = c1->getPorts();
+                auto& ports2 = c2->getPorts();
+                if (port1 >= 0 && port1 < (int)ports1.size() && 
+                    port2 >= 0 && port2 < (int)ports2.size()) {
+                    circuit.connect(ports1[port1], ports2[port2]);
+                    std::cout << "Connection successful!\n";
+                } else {
+                    std::cout << "Invalid port number!\n";
+                }
+            } else {
+                std::cout << "元件不存在！\n";
+            }
+        }
+        
+        else if (choice == 3) {
+            std::cout << "\n[Delete Component]\n";
+            int id;
+            std::cout << "Enter component ID to delete: ";
+            std::cin >> id;
+            clearInput();
+            
+            circuit.removeComponent(id);
+            std::cout << "元件已删除（如果存在）\n";
+        }
+        
+        else if (choice == 4) {
+            std::cout << "\n[Run Simulation]\n";
+            if (circuit.solve()) {
+                auto results = circuit.getResults();
+                printResults(results);
+                circuit.logSimulation("Manual simulation");
+            } else {
+                std::cout << "仿真失败！请检查电路连接\n";
+            }
+        }
+        
+        else if (choice == 5) {
+            std::cout << "\n[Validate Circuit]\n";
+            auto errors = circuit.validateCircuit();
+            if (errors.empty()) {
+                std::cout << "✓ 电路验证通过！\n";
+            } else {
+                std::cout << "✗ 电路验证失败:\n";
+                for (const auto& err : errors) {
+                    std::cout << "  - " << err << "\n";
+                }
+            }
+        }
+        
+        else if (choice == 6) {
+            std::cout << "\n【电路信息】\n";
+            std::cout << "Component count: " << circuit.getComponentCount() << "\n";
+            std::cout << "节点数量: " << circuit.getNodeCount() << "\n";
+            std::cout << "Branch count: " << circuit.getBranchList().size() << "\n";
+            
+            auto results = circuit.getResults();
+            if (!results.empty()) {
+                std::cout << "\nCurrent components:\n";
+                for (const auto& r : results) {
+                    std::cout << "  ID:" << r.componentId 
+                              << "  " << r.componentName 
+                              << " (" << r.componentType << ")\n";
+                }
+            }
+        }
+        
+        else if (choice == 7) {
+            std::cout << "\n[Export Log]\n";
+            if (CircuitSim::SimulationLogger::getInstance().exportCSV("simulation_log.csv")) {
+                std::cout << "Log exported to simulation_log.csv\n";
+            } else {
+                std::cout << "Export failed!\n";
+            }
+        }
+        
+        else if (choice == 8) {
+            std::cout << "\nThank you! Goodbye!\n";
+            break;
+        }
+        
+        else {
+            std::cout << "\n无效选择，请重新输入！\n";
+        }
+    }
     
     return 0;
 }

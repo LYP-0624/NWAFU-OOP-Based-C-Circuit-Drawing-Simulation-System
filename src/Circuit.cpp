@@ -6,12 +6,13 @@
 #include "LinearSolver.h"
 #include "CircuitValidator.h"
 #include "SimulationLogger.h"
+#include "ComponentFactory.h"
 #include <sstream>
 #include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <set>
-#include "ComponentFactory.h"
+#include "../Serialize/CircuitJsonSerializer.h"
 
 namespace CircuitSim {
 
@@ -162,6 +163,7 @@ bool Circuit::solve() {
             Component* comp = branch->getComponent();
             branch->setCurrent(comp->getProperty("current"));
         }
+        simulation_results_ = getResults();
     }
 
     return result;
@@ -257,36 +259,25 @@ void Circuit::clear() {
 }
 
 std::string Circuit::toJson() const {
-    std::stringstream ss;
-    ss << "{\"version\":\"1.0\",\"components\":[";
-    bool first = true;
-    for (const auto& [id, comp] : components_) {
-        if (!first) ss << ",";
-        first = false;
-        ss << "{\"id\":" << id 
-           << ",\"type\":\"" << ComponentFactory::typeToString(comp->getType()) << "\""
-           << ",\"x\":" << comp->getX() 
-           << ",\"y\":" << comp->getY() << "}";
-    }
-    
-    ss << "],\"connections\":[";
-    first = true;
-    for (const auto& branch : branches_) {
-        if (!first) ss << ",";
-        first = false;
-        ss << "{\"branchId\":" << branch->getId()
-           << ",\"componentId\":" << branch->getComponent()->getId()
-           << ",\"nodeA\":" << branch->getNodeA()->getId()
-           << ",\"nodeB\":" << branch->getNodeB()->getId() << "}";
-    }
-    ss << "]}";
-    
-    return ss.str();
+    json j = CircuitJsonSerializer::serializeToJson(*this);
+    return j.dump(4);
 }
 
-bool Circuit::fromJson(const std::string& json) {
-    clear();
-    return true;
+bool Circuit::fromJson(const std::string& jsonStr) {
+    try {
+        json j = json::parse(jsonStr);
+        return CircuitJsonSerializer::deserializeFromJson(j, *this);
+    } catch (...) {
+        return false;
+    }
+}
+
+bool Circuit::saveToJsonFile(const std::string& file_path) {
+    return CircuitJsonSerializer::saveToJsonFile(*this, file_path);
+}
+
+bool Circuit::loadFromJsonFile(const std::string& file_path) {
+    return CircuitJsonSerializer::loadFromJsonFile(file_path, *this);
 }
 
 const std::vector<Branch*>& Circuit::getBranchList() const {

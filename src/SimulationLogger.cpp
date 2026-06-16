@@ -1,8 +1,56 @@
 #include "SimulationLogger.h"
+#include "Component.h"
+#include "Circuit.h"
+#include "ComponentFactory.h"
 #include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <ctime>
+#include <sstream>
 
 namespace CircuitSim {
+
+void SimulationLogger::ensureLogFile() {
+    if (!fileOpened_) {
+        logFile_.open("simulation_log.txt", std::ios::app);
+        fileOpened_ = true;
+    }
+}
+
+void SimulationLogger::log(LogLevel level, const std::string& message) {
+    ensureLogFile();
+    auto now = std::time(nullptr);
+    std::string levelStr;
+    switch (level) {
+        case LogLevel::DEBUG: levelStr = "DEBUG"; break;
+        case LogLevel::INFO: levelStr = "INFO"; break;
+        case LogLevel::WARNING: levelStr = "WARN"; break;
+        case LogLevel::ERROR: levelStr = "ERROR"; break;
+        case LogLevel::FATAL: levelStr = "FATAL"; break;
+    }
+    logFile_ << "[" << levelStr << "] " << message << std::endl;
+}
+
+void SimulationLogger::logSimulationStep(const std::string& step_description) {
+    log(LogLevel::INFO, "Simulation Step: " + step_description);
+}
+
+void SimulationLogger::logComponentState(const Component* component) {
+    if (!component) return;
+    std::string state = "Component State: ID=" + std::to_string(component->getId()) +
+                        ", Name=" + component->getName() +
+                        ", Type=" + ComponentFactory::typeToString(component->getType());
+    log(LogLevel::DEBUG, state);
+}
+
+void SimulationLogger::logCircuitState(const Circuit* circuit) {
+    if (!circuit) return;
+    std::string state = "Circuit State: Components=" + std::to_string(circuit->getComponents().size()) +
+                        ", Nodes=" + std::to_string(circuit->getNodes().size()) +
+                        ", Branches=" + std::to_string(circuit->getBranches().size()) +
+                        ", Solved=" + (circuit->isSolved() ? "Yes" : "No");
+    log(LogLevel::INFO, state);
+}
 
 SimulationLogger& SimulationLogger::getInstance() {
     static SimulationLogger instance;
@@ -102,6 +150,27 @@ std::vector<double> SimulationLogger::getHistory(int componentId, const std::str
         }
     }
     return history;
+}
+
+std::string SimulationLogger::getLog() const {
+    std::stringstream ss;
+    for (const auto& entry : logs_) {
+        ss << "=== Simulation " << entry.simulationId << " ===" << std::endl;
+        ss << "Timestamp: " << entry.timestamp << std::endl;
+        ss << "Description: " << entry.description << std::endl;
+        ss << "Results:" << std::endl;
+        for (const auto& result : entry.results) {
+            ss << "  ID=" << result.componentId 
+               << ", Name=" << result.componentName
+               << ", Type=" << result.componentType
+               << ", V=" << result.voltage
+               << ", I=" << result.current
+               << ", P=" << result.power
+               << std::endl;
+        }
+        ss << std::endl;
+    }
+    return ss.str();
 }
 
 } // namespace CircuitSim

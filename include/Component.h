@@ -36,6 +36,7 @@ public:
     virtual ~Component();
 
     virtual ComponentType getType() const = 0;
+    virtual std::string getTypeName() const;
     virtual void simulate(double voltage, double current) = 0;
     virtual double getProperty(const std::string& key) const = 0;
     virtual std::map<std::string, double> getAllProperties() const = 0;
@@ -43,6 +44,8 @@ public:
 
     int getId() const { return id_; }
     std::string getName() const { return name_; }
+    void setName(const std::string& name) { name_ = name; }
+    void setProperty(const std::string& key, double value) { properties_[key] = value; }
     double getX() const { return x_; }
     double getY() const { return y_; }
     void setPosition(double x, double y) { x_ = x; y_ = y; }

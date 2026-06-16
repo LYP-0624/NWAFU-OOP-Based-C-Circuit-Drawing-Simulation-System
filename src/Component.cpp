@@ -1,7 +1,12 @@
 #include "Component.h"
 #include "Port.h"
+#include "ComponentFactory.h"
 
 namespace CircuitSim {
+
+std::string Component::getTypeName() const {
+    return ComponentFactory::typeToString(getType());
+}
 
 Component::Component(int id, const std::string& name, double x, double y)
     : id_(id), name_(name), x_(x), y_(y), rotation_(0), selected_(false) {}

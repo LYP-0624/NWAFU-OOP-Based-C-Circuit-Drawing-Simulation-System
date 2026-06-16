@@ -18,6 +18,9 @@ public:
 
     void registerType(const std::string& typeName, Creator creator);
     Component* create(const std::string& typeName, int id, double x, double y);
+    bool isTypeRegistered(const std::string& typeName) const {
+        return creators_.find(typeName) != creators_.end();
+    }
 
     static std::string typeToString(ComponentType type);
     static ComponentType stringToType(const std::string& str);

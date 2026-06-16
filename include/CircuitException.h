@@ -36,6 +36,18 @@ public:
         : CircuitException(message) {}
 };
 
+class InvalidJsonException : public CircuitException {
+public:
+    explicit InvalidJsonException(const std::string& message = "Invalid JSON format") 
+        : CircuitException("Invalid JSON: " + message) {}
+};
+
+class FileIOException : public CircuitException {
+public:
+    explicit FileIOException(const std::string& message = "File I/O error") 
+        : CircuitException("File I/O: " + message) {}
+};
+
 } // namespace CircuitSim
 
 #endif
