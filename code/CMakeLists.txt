@@ -18,9 +18,13 @@ set(PROJECT_SOURCES
         mainwindow.h
         mainwindow.ui
         graphcomponent.h
-        graphcomponent.cpp
         resistoritem.h
-)
+        # 👇 把你刚刚新建的4个文件，手动敲到这下面（注意大小写必须和文件名一模一样！）
+        capacitoritem.h
+        inductoritem.h
+        switchitem.h
+        grounditem.h
+    )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(circuit
@@ -28,6 +32,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${PROJECT_SOURCES}
         graphcomponent.h graphcomponent.cpp
         resistoritem.h
+        capacitoritem.h
+        inductoritem.h
+        grounditem.h
+        switchitem.h
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET circuit APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

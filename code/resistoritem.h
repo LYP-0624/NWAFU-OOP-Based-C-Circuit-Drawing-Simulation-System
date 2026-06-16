@@ -12,14 +12,30 @@ class ResistorItem : public GraphComponent {
 public:
     ResistorItem(int id) : GraphComponent(id, "Resistor") {}
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override {
-        Q_UNUSED(option); Q_UNUSED(widget);
+        Q_UNUSED(option);
+        Q_UNUSED(widget);
+
+        // 开启抗锯齿，让线条更平滑
+        painter->setRenderHint(QPainter::Antialiasing);
+
+        // 设置边框为黑色，粗细为2
         painter->setPen(QPen(Qt::black, 2));
+
+        // 选中时变成淡蓝色，平时是纯白色
         painter->setBrush(isSelected() ? QBrush(QColor(200, 220, 255)) : Qt::white);
-        painter->drawRect(-25, -10, 50, 20);
-        painter->drawLine(-40, 0, -25, 0);
-        painter->drawLine(25, 0, 40, 0);
+
+        // 画一个居中的国标/欧标长方形（宽40，高20）
+        painter->drawRect(-20, -10, 40, 20);
+
+        // 在中心画一个专业的字母 R
         painter->setPen(Qt::darkBlue);
-        painter->drawText(-25, -15, QString("R%1: %2V").arg(m_id).arg(m_voltage));
+        painter->setFont(QFont("Arial", 10, QFont::Bold));
+        painter->drawText(-6, 5, "R");
+
+        // 如果需要显示头顶的电压/编号，可以保留这行
+        painter->setPen(Qt::darkGreen);
+        painter->setFont(QFont("Arial", 8));
+        painter->drawText(-20, -15, QString("R%1: %2V").arg(m_id).arg(m_voltage));
     }
 };
 
@@ -28,15 +44,11 @@ class PowerSourceItem : public GraphComponent {
 public:
     PowerSourceItem(int id) : GraphComponent(id, "PowerSource") {}
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override {
-        Q_UNUSED(option); Q_UNUSED(widget);
         painter->setPen(QPen(Qt::black, 2));
-        painter->drawLine(-40, 0, -5, 0);
-        painter->drawLine(5, 0, 40, 0);
-        painter->drawLine(-5, -20, -5, 20);
-        painter->setPen(QPen(Qt::black, 4));
-        painter->drawLine(5, -10, 5, 10);
-        painter->setPen(Qt::darkRed);
-        painter->drawText(-20, -25, QString("E%1: %2V").arg(m_id).arg(m_voltage));
+
+        // 【已删除外延引脚，只保留一长一短竖线】
+        painter->drawLine(-10, -15, -10, 15); // 长线 (正极)
+        painter->drawLine(10, -8, 10, 8);     // 短线 (负极)
     }
 };
 
@@ -45,16 +57,19 @@ class LightBulbItem : public GraphComponent {
 public:
     LightBulbItem(int id) : GraphComponent(id, "LightBulb") {}
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override {
-        Q_UNUSED(option); Q_UNUSED(widget);
+        // 【已删除引脚，加入通电变黄效果】
+        if (m_voltage > 0) {
+            painter->setBrush(Qt::yellow); // 通电发黄光
+        } else {
+            painter->setBrush(Qt::NoBrush);
+        }
+
         painter->setPen(QPen(Qt::black, 2));
-        painter->setBrush(m_voltage > 0.1 ? QBrush(Qt::yellow) : Qt::white);
         painter->drawEllipse(-15, -15, 30, 30);
-        painter->drawLine(-40, 0, -15, 0);
-        painter->drawLine(15, 0, 40, 0);
+
+        // 画里面的叉号
         painter->drawLine(-10, -10, 10, 10);
         painter->drawLine(-10, 10, 10, -10);
-        painter->setPen(Qt::darkGreen);
-        painter->drawText(-20, -20, QString("L%1").arg(m_id));
     }
 };
 
@@ -63,16 +78,17 @@ class AmmeterItem : public GraphComponent {
 public:
     AmmeterItem(int id) : GraphComponent(id, "Ammeter") {}
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override {
-        Q_UNUSED(option); Q_UNUSED(widget);
         painter->setPen(QPen(Qt::black, 2));
-        painter->setBrush(Qt::white);
+
+        // 【已删除引脚，只保留表盘和数据】
         painter->drawEllipse(-15, -15, 30, 30);
-        painter->drawLine(-40, 0, -15, 0);
-        painter->drawLine(15, 0, 40, 0);
-        painter->setFont(QFont("Arial", 12, QFont::Bold));
-        painter->drawText(-7, 5, "A");
-        painter->setFont(QFont("Arial", 9));
-        painter->drawText(-20, -20, QString("%1A").arg(m_current));
+        painter->drawText(-15, -15, 30, 30, Qt::AlignCenter, "A");
+
+        // 如果通电了，显示电流值
+        if (m_voltage > 0 || m_current > 0) {
+            painter->setPen(Qt::blue);
+            painter->drawText(-30, 20, 60, 20, Qt::AlignCenter, QString("%1 A").arg(m_current));
+        }
     }
 };
 
@@ -81,16 +97,16 @@ class VoltmeterItem : public GraphComponent {
 public:
     VoltmeterItem(int id) : GraphComponent(id, "Voltmeter") {}
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override {
-        Q_UNUSED(option); Q_UNUSED(widget);
         painter->setPen(QPen(Qt::black, 2));
-        painter->setBrush(Qt::white);
+
+        // 【已删除引脚，只保留表盘和数据】
         painter->drawEllipse(-15, -15, 30, 30);
-        painter->drawLine(-40, 0, -15, 0);
-        painter->drawLine(15, 0, 40, 0);
-        painter->setFont(QFont("Arial", 12, QFont::Bold));
-        painter->drawText(-7, 5, "V");
-        painter->setFont(QFont("Arial", 9));
-        painter->drawText(-20, -20, QString("%1V").arg(m_voltage));
+        painter->drawText(-15, -15, 30, 30, Qt::AlignCenter, "V");
+
+        if (m_voltage > 0 || m_current > 0) {
+            painter->setPen(Qt::red);
+            painter->drawText(-30, 20, 60, 20, Qt::AlignCenter, QString("%1 V").arg(m_voltage));
+        }
     }
 };
 
@@ -108,11 +124,12 @@ public:
     WireItem(GraphComponent* start, GraphComponent* end)
         : m_startItem(start), m_endItem(end) {
         setZValue(-1); // 压在最下面
+        setFlag(QGraphicsItem::ItemIsSelectable, true);
     }
 
     // 暴力包围盒
     QRectF boundingRect() const override {
-        return QRectF(-9999, -9999, 19998, 19998);
+        return QRectF(-5, -5, 5, 5);
     }
 
     // 绘制逻辑
