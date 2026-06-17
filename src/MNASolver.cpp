@@ -240,10 +240,10 @@ void MNASolver::extractResults(const std::unordered_map<int, Component*>& compon
             }
 
             case ComponentType::AMMETER: {
-                if (vsIdx < numVoltageSources_) {
-                    i = solutionX_[numNodes_ + vsIdx];
+                double r = 0.001;
+                if (r > 1e-10) {
+                    i = v / r;
                 }
-                vsIdx++;
                 break;
             }
 
@@ -294,20 +294,29 @@ void MNASolver::extractResults(const std::unordered_map<int, Component*>& compon
 bool MNASolver::solve(const std::unordered_map<int, Component*>& components,
                       const std::vector<Node*>& nodes) {
     if (components.empty() || nodes.empty()) {
+        std::cerr << "[MNASolver] Error: No components or nodes" << std::endl;
         return false;
     }
 
     std::string errorMsg;
     if (!validateCircuit(components, nodes, errorMsg)) {
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
         return false;
     }
 
+    std::cerr << "[MNASolver] Components: " << components.size() 
+              << ", Nodes: " << nodes.size() << std::endl;
+
     if (!assembleMatrix(components, nodes)) {
+        std::cerr << "[MNASolver] Matrix assembly failed" << std::endl;
         return false;
     }
+
+    std::cerr << "[MNASolver] Matrix size: " << matrixSize_ << "x" << matrixSize_ << std::endl;
 
     SolverStats stats;
     if (!LinearSolver::solveWithStats(matrixA_, vectorB_, solutionX_, stats)) {
+        std::cerr << "[MNASolver] Linear solve failed: " << stats.errorMessage << std::endl;
         return false;
     }
 
@@ -334,11 +343,13 @@ bool MNASolver::validateCircuit(const std::unordered_map<int, Component*>& compo
                                 std::string& errorMsg) {
     if (components.empty()) {
         errorMsg = "No components in circuit";
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
         return false;
     }
 
     if (nodes.empty()) {
         errorMsg = "No nodes in circuit";
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
         return false;
     }
 
@@ -352,20 +363,34 @@ bool MNASolver::validateCircuit(const std::unordered_map<int, Component*>& compo
 
     if (!hasSource) {
         errorMsg = "No voltage source in circuit";
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
         return false;
     }
 
     std::set<int> connectedNodes;
+    int connectedPorts = 0;
     for (const auto& pair : components) {
-        for (auto* port : pair.second->getPorts()) {
+        Component* comp = pair.second;
+        for (auto* port : comp->getPorts()) {
             if (port->isConnected()) {
                 connectedNodes.insert(port->getNode()->getId());
+                connectedPorts++;
             }
         }
     }
 
+    std::cerr << "[MNASolver] Connected ports: " << connectedPorts 
+              << ", Connected nodes: " << connectedNodes.size() << std::endl;
+
+    if (connectedPorts == 0) {
+        errorMsg = "No ports are connected";
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
+        return false;
+    }
+
     if (connectedNodes.size() < 2) {
-        errorMsg = "Circuit is not properly connected";
+        errorMsg = "Circuit is not properly connected (need at least 2 connected nodes)";
+        std::cerr << "[MNASolver] Validation failed: " << errorMsg << std::endl;
         return false;
     }
 

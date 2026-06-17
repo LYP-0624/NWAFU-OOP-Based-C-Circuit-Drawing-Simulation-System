@@ -102,8 +102,27 @@ void Circuit::buildConnectivityGraph() {
 }
 
 void Circuit::assignGroundNode() {
+    for (const auto& [id, comp] : components_) {
+        if (comp->getType() == ComponentType::GROUND) {
+            auto& ports = comp->getPorts();
+            Node* groundNode = nullptr;
+
+            for (auto* port : ports) {
+                if (port->isConnected() && port->getNode()) {
+                    if (!groundNode) {
+                        groundNode = port->getNode();
+                        groundNode->setGround(true);
+                    } else if (port->getNode() != groundNode) {
+                        mergeNodes(groundNode, port->getNode());
+                    }
+                }
+            }
+            if (groundNode) return;
+        }
+    }
+
     if (nodes_.empty()) return;
-    
+
     bool hasGround = false;
     for (auto* node : nodes_) {
         if (node->isGround()) {
@@ -111,7 +130,7 @@ void Circuit::assignGroundNode() {
             break;
         }
     }
-    
+
     if (!hasGround && !nodes_.empty()) {
         nodes_[0]->setGround(true);
     }
@@ -161,7 +180,10 @@ bool Circuit::solve() {
     if (result) {
         for (auto* branch : branches_) {
             Component* comp = branch->getComponent();
-            branch->setCurrent(comp->getProperty("current"));
+            if (!comp) comp = branch->getStartComponent();
+            if (comp) {
+                branch->setCurrent(comp->getProperty("current"));
+            }
         }
         simulation_results_ = getResults();
     }
@@ -273,6 +295,7 @@ bool Circuit::fromJson(const std::string& jsonStr) {
 }
 
 bool Circuit::saveToJsonFile(const std::string& file_path) {
+    rebuildBranches();
     return CircuitJsonSerializer::saveToJsonFile(*this, file_path);
 }
 

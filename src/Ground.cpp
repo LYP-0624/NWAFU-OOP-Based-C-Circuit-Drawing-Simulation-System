@@ -7,6 +7,7 @@ namespace CircuitSim {
 Ground::Ground(int id, double x, double y)
     : Component(id, "Ground", x, y), voltage_(0.0) {
     addPort(new Port(this, 0));
+    addPort(new Port(this, 1));
 }
 
 Ground::~Ground() = default;
