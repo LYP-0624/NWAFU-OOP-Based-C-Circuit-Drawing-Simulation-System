@@ -15,24 +15,25 @@ using json = nlohmann::json;
 
 namespace CircuitSim {
 
+// 电路JSON序列化器
 class CircuitJsonSerializer {
 public:
-    static json serializeToJson(const Circuit& circuit);
-    static bool deserializeFromJson(const json& json_data, Circuit& circuit);
-    static bool saveToJsonFile(const Circuit& circuit, const std::string& file_path);
-    static bool loadFromJsonFile(const std::string& file_path, Circuit& circuit);
+    static json serializeToJson(const Circuit& circuit);  // 序列化为JSON对象
+    static bool deserializeFromJson(const json& json_data, Circuit& circuit); // 从JSON恢复电路
+    static bool saveToJsonFile(const Circuit& circuit, const std::string& file_path); // 保存到JSON文件
+    static bool loadFromJsonFile(const std::string& file_path, Circuit& circuit); // 从JSON文件加载
 
 private:
-    static bool validateJsonRootStructure(const json& json_data);
-    static bool validateComponentJson(const json& comp_json);
+    static bool validateJsonRootStructure(const json& json_data); // 验证JSON根结构
+    static bool validateComponentJson(const json& comp_json);     // 验证元件JSON
 
-    static json serializeComponent(const Component* component);
-    static json serializeNode(const Node* node);
-    static json serializeBranch(const Branch* branch);
+    static json serializeComponent(const Component* component);   // 序列化元件
+    static json serializeNode(const Node* node);                 // 序列化节点
+    static json serializeBranch(const Branch* branch);           // 序列化支路
 
-    static Component* deserializeComponent(const json& comp_json);
-    static Node* deserializeNode(const json& node_json);
-    static Branch* deserializeBranch(const json& branch_json, Circuit& circuit);
+    static Component* deserializeComponent(const json& comp_json); // 反序列化元件
+    static Node* deserializeNode(const json& node_json);           // 反序列化节点
+    static Branch* deserializeBranch(const json& branch_json, Circuit& circuit); // 反序列化支路
 };
 
 } // namespace CircuitSim

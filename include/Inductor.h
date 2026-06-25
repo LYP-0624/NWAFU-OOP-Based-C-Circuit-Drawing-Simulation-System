@@ -5,11 +5,12 @@
 
 namespace CircuitSim {
 
+// 电感元件
 class Inductor : public Component {
 private:
-    double inductance_;
-    double current_;
-    double voltage_;
+    double inductance_;  // 电感量(H)
+    double current_;     // 电流(A)
+    double voltage_;     // 电压(V)
 
 public:
     Inductor(int id, double x, double y, double inductance = 1e-3);

@@ -5,12 +5,13 @@
 
 namespace CircuitSim {
 
+// 电容元件
 class Capacitor : public Component {
 private:
-    double capacitance_;
-    double charge_;
-    double voltage_;
-    double current_;
+    double capacitance_;  // 电容量(F)
+    double charge_;       // 电荷量(C)
+    double voltage_;      // 电压(V)
+    double current_;      // 电流(A)
 
 public:
     Capacitor(int id, double x, double y, double capacitance = 1e-6);

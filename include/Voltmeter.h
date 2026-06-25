@@ -5,9 +5,10 @@
 
 namespace CircuitSim {
 
+// 电压表元件
 class Voltmeter : public Component {
 private:
-    double reading_;
+    double reading_;  // 读数(V)
 
 public:
     Voltmeter(int id, double x, double y);

@@ -20,6 +20,7 @@ namespace CircuitSim {
 
 namespace {
 
+// 从JSON属性中解析电源类型（默认电压源）
 SourceType sourceTypeFromJson(const json& props) {
     if (!props.contains("sourceType")) {
         return SourceType::VOLTAGE_SOURCE;
@@ -30,8 +31,10 @@ SourceType sourceTypeFromJson(const json& props) {
 
 } // namespace
 
+// 将电路对象序列化为JSON格式
 json CircuitJsonSerializer::serializeToJson(const Circuit& circuit) {
     json root;
+    // 写入元数据信息
     root["metadata"]["version"] = "1.0.0";
     root["metadata"]["circuit_name"] = circuit.getName();
     root["metadata"]["next_component_id"] = circuit.getNextComponentId();
@@ -42,24 +45,28 @@ json CircuitJsonSerializer::serializeToJson(const Circuit& circuit) {
     root["metadata"]["branch_count"] = circuit.getBranchCount();
     root["metadata"]["is_solved"] = circuit.isSolved();
 
+    // 序列化所有元器件
     json components = json::array();
     for (const auto& [id, comp] : circuit.getComponents()) {
         components.push_back(serializeComponent(comp));
     }
     root["components"] = std::move(components);
 
+    // 序列化所有节点
     json nodes = json::array();
     for (const auto* node : circuit.getNodes()) {
         nodes.push_back(serializeNode(node));
     }
     root["nodes"] = std::move(nodes);
 
+    // 序列化所有支路
     json branches = json::array();
     for (const auto* branch : circuit.getBranches()) {
         branches.push_back(serializeBranch(branch));
     }
     root["branches"] = std::move(branches);
 
+    // 序列化仿真结果
     json results = json::array();
     for (const auto& result : circuit.getSimulationResults()) {
         json r;
@@ -77,6 +84,7 @@ json CircuitJsonSerializer::serializeToJson(const Circuit& circuit) {
     return root;
 }
 
+// 从JSON数据反序列化恢复电路对象
 bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& circuit) {
     if (!validateJsonRootStructure(json_data)) {
         return false;
@@ -88,6 +96,7 @@ bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& 
                           json_data["metadata"].value("next_node_id", 1),
                           json_data["metadata"].value("next_branch_id", 1));
 
+    // 先反序列化节点并建立ID映射表
     std::unordered_map<int, Node*> nodeMap;
     if (json_data.contains("nodes")) {
         for (const auto& node_json : json_data["nodes"]) {
@@ -100,6 +109,7 @@ bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& 
         }
     }
 
+    // 反序列化元器件并恢复端口连接
     if (json_data.contains("components")) {
         for (const auto& comp_json : json_data["components"]) {
             if (!validateComponentJson(comp_json)) {
@@ -140,6 +150,7 @@ bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& 
         }
     }
 
+    // 反序列化支路
     if (json_data.contains("branches")) {
         for (const auto& branch_json : json_data["branches"]) {
             Branch* branch = deserializeBranch(branch_json, circuit);
@@ -149,6 +160,7 @@ bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& 
         }
     }
 
+    // 恢复ID计数器
     circuit.setIdCounters(json_data["metadata"].value("next_component_id", circuit.getNextComponentId()),
                           json_data["metadata"].value("next_node_id", circuit.getNextNodeId()),
                           json_data["metadata"].value("next_branch_id", circuit.getNextBranchId()));
@@ -157,6 +169,7 @@ bool CircuitJsonSerializer::deserializeFromJson(const json& json_data, Circuit& 
     return true;
 }
 
+// 将电路保存为JSON文件
 bool CircuitJsonSerializer::saveToJsonFile(const Circuit& circuit, const std::string& file_path) {
     if (!CircuitFileValidator::validateFilePath(file_path, true)) {
         return false;
@@ -172,6 +185,7 @@ bool CircuitJsonSerializer::saveToJsonFile(const Circuit& circuit, const std::st
     return true;
 }
 
+// 从JSON文件加载电路
 bool CircuitJsonSerializer::loadFromJsonFile(const std::string& file_path, Circuit& circuit) {
     if (!CircuitFileValidator::validateFilePath(file_path, false) ||
         !CircuitFileValidator::validateJsonFileFormat(file_path)) {
@@ -193,6 +207,7 @@ bool CircuitJsonSerializer::loadFromJsonFile(const std::string& file_path, Circu
     return deserializeFromJson(circuit_json, circuit);
 }
 
+// 验证JSON根结构是否包含必要字段
 bool CircuitJsonSerializer::validateJsonRootStructure(const json& json_data) {
     return json_data.contains("metadata") &&
            json_data.contains("components") &&
@@ -200,6 +215,7 @@ bool CircuitJsonSerializer::validateJsonRootStructure(const json& json_data) {
            json_data.contains("branches");
 }
 
+// 验证单个元器件JSON是否包含必要字段
 bool CircuitJsonSerializer::validateComponentJson(const json& comp_json) {
     if (!comp_json.contains("id") || !comp_json.contains("type") || !comp_json.contains("x") ||
         !comp_json.contains("y")) {
@@ -208,6 +224,7 @@ bool CircuitJsonSerializer::validateComponentJson(const json& comp_json) {
     return CircuitFileValidator::validateComponentParameters(comp_json);
 }
 
+// 序列化单个元器件为JSON
 json CircuitJsonSerializer::serializeComponent(const Component* component) {
     json comp;
     comp["id"] = component->getId();
@@ -219,6 +236,7 @@ json CircuitJsonSerializer::serializeComponent(const Component* component) {
     comp["selected"] = component->isSelected();
     comp["properties"] = component->getAllProperties();
 
+    // 根据元器件类型写入特定属性
     switch (component->getType()) {
         case ComponentType::RESISTOR: {
             const auto* r = static_cast<const Resistor*>(component);
@@ -258,6 +276,7 @@ json CircuitJsonSerializer::serializeComponent(const Component* component) {
             break;
     }
 
+    // 序列化端口连接信息
     json ports = json::array();
     const auto portList = component->getPorts();
     for (size_t i = 0; i < portList.size(); ++i) {
@@ -273,12 +292,14 @@ json CircuitJsonSerializer::serializeComponent(const Component* component) {
     return comp;
 }
 
+// 序列化单个节点为JSON
 json CircuitJsonSerializer::serializeNode(const Node* node) {
     json nodeJson;
     nodeJson["id"] = node->getId();
     nodeJson["is_ground"] = node->isGround();
     nodeJson["voltage"] = node->getVoltage();
 
+    // 序列化连接到该节点的端口
     json ports = json::array();
     for (const auto* port : node->getPorts()) {
         json p;
@@ -290,6 +311,7 @@ json CircuitJsonSerializer::serializeNode(const Node* node) {
     return nodeJson;
 }
 
+// 序列化单条支路为JSON
 json CircuitJsonSerializer::serializeBranch(const Branch* branch) {
     json branchJson;
     branchJson["id"] = branch->getId();
@@ -303,6 +325,7 @@ json CircuitJsonSerializer::serializeBranch(const Branch* branch) {
     return branchJson;
 }
 
+// 从JSON反序列化单个元器件
 Component* CircuitJsonSerializer::deserializeComponent(const json& comp_json) {
     Component* component = ComponentFactory::getInstance().create(
         comp_json.value("type", std::string{}),
@@ -317,6 +340,7 @@ Component* CircuitJsonSerializer::deserializeComponent(const json& comp_json) {
     component->setRotation(comp_json.value("rotation", 0.0));
     component->setSelected(comp_json.value("selected", false));
 
+    // 读取通用属性
     const auto props = comp_json.contains("properties") && comp_json["properties"].is_object()
         ? comp_json["properties"]
         : json::object();
@@ -326,6 +350,7 @@ Component* CircuitJsonSerializer::deserializeComponent(const json& comp_json) {
         }
     }
 
+    // 根据具体类型恢复特定属性
     if (auto* r = dynamic_cast<Resistor*>(component); r && props.contains("resistance")) {
         r->setResistance(props["resistance"].get<double>());
     } else if (auto* b = dynamic_cast<Bulb*>(component); b && props.contains("resistance")) {
@@ -354,6 +379,7 @@ Component* CircuitJsonSerializer::deserializeComponent(const json& comp_json) {
     return component;
 }
 
+// 从JSON反序列化单个节点
 Node* CircuitJsonSerializer::deserializeNode(const json& node_json) {
     if (!node_json.contains("id")) {
         return nullptr;
@@ -365,6 +391,7 @@ Node* CircuitJsonSerializer::deserializeNode(const json& node_json) {
     return node;
 }
 
+// 从JSON反序列化单条支路
 Branch* CircuitJsonSerializer::deserializeBranch(const json& branch_json, Circuit& circuit) {
     const int startId = branch_json.value("start_component_id", -1);
     const int startPort = branch_json.value("start_port_index", -1);

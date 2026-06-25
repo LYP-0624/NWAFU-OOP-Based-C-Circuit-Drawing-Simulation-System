@@ -5,15 +5,17 @@
 
 namespace CircuitSim {
 
+// 电源类型
 enum class SourceType {
-    VOLTAGE_SOURCE,
-    CURRENT_SOURCE
+    VOLTAGE_SOURCE,  // 电压源
+    CURRENT_SOURCE   // 电流源
 };
 
+// 电源元件
 class PowerSource : public Component {
 private:
-    double value_;
-    SourceType sourceType_;
+    double value_;       // 源值(电压/V 或电流/A)
+    SourceType sourceType_; // 源类型
 
 public:
     PowerSource(int id, double x, double y, double value = 5.0, SourceType type = SourceType::VOLTAGE_SOURCE);

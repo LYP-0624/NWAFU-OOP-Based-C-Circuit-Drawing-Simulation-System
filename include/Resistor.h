@@ -5,11 +5,12 @@
 
 namespace CircuitSim {
 
+// 电阻元件
 class Resistor : public Component {
 private:
-    double resistance_;
-    double current_;
-    double voltage_;
+    double resistance_;  // 电阻值(Ω)
+    double current_;     // 电流值(A)
+    double voltage_;     // 电压值(V)
 
 public:
     Resistor(int id, double x, double y, double resistance = 100.0);

@@ -19,16 +19,19 @@ namespace CircuitSim {
 
 namespace {
 
+// 并查集数据结构，用于构建连通分量
 struct UnionFind {
     std::vector<int> parent;
     std::vector<int> rank;
 
+    // 初始化并查集，每个元素初始父节点为自己
     explicit UnionFind(int size) : parent(size), rank(size, 0) {
         for (int i = 0; i < size; ++i) {
             parent[i] = i;
         }
     }
 
+    // 查找根节点（带路径压缩）
     int find(int x) {
         if (parent[x] != x) {
             parent[x] = find(parent[x]);
@@ -36,6 +39,7 @@ struct UnionFind {
         return parent[x];
     }
 
+    // 合并两个集合（按秩合并）
     void unite(int a, int b) {
         a = find(a);
         b = find(b);
@@ -52,10 +56,12 @@ struct UnionFind {
     }
 };
 
+// 端口标识键（用于唯一标识一个元器件的某个端口）
 struct PortKey {
     int componentId = -1;
     int portIndex = -1;
 
+    // 重载小于运算符，用于map排序
     bool operator<(const PortKey& other) const {
         if (componentId != other.componentId) {
             return componentId < other.componentId;
@@ -66,29 +72,34 @@ struct PortKey {
 
 } // namespace
 
+// 构造函数：初始化ID计数器和求解器
 Circuit::Circuit()
     : nextComponentId_(1), nextNodeId_(1), nextBranchId_(1), solved_(false), solver_(new MNASolver()) {}
 
+// 析构函数：清理所有资源
 Circuit::~Circuit() {
     clear();
     delete solver_;
 }
-
+ 
+// 添加元器件到电路
 void Circuit::addComponent(Component* comp) {
     if (!comp) {
         return;
     }
     components_[comp->getId()] = comp;
-    nextComponentId_ = std::max(nextComponentId_, comp->getId() + 1);
-    solved_ = false;
+    nextComponentId_ = std::max(nextComponentId_, comp->getId() + 1);  // 更新ID计数器
+    solved_ = false;  // 标记需要重新求解
 }
 
+// 移除指定ID的元器件，同时删除关联的支路
 void Circuit::removeComponent(int id) {
     auto it = components_.find(id);
     if (it == components_.end()) {
         return;
     }
 
+    // 删除与该元器件关联的所有支路
     branches_.erase(std::remove_if(branches_.begin(), branches_.end(), [id](Branch* branch) {
         if (!branch) {
             return true;
@@ -104,15 +115,17 @@ void Circuit::removeComponent(int id) {
 
     delete it->second;
     components_.erase(it);
-    buildConnectivityGraph();
+    buildConnectivityGraph();  // 重建连接图
     solved_ = false;
 }
 
+// 获取指定ID的元器件
 Component* Circuit::getComponent(int id) const {
     auto it = components_.find(id);
     return it == components_.end() ? nullptr : it->second;
 }
 
+// 获取指定ID的支路
 Branch* Circuit::getBranch(int id) const {
     for (auto* branch : branches_) {
         if (branch && branch->getId() == id) {
@@ -122,6 +135,7 @@ Branch* Circuit::getBranch(int id) const {
     return nullptr;
 }
 
+// 移除指定ID的支路
 bool Circuit::removeBranch(int id) {
     for (auto it = branches_.begin(); it != branches_.end(); ++it) {
         if (*it && (*it)->getId() == id) {
@@ -135,6 +149,7 @@ bool Circuit::removeBranch(int id) {
     return false;
 }
 
+// 连接两个端口，创建新的支路
 Branch* Circuit::connect(Port* a, Port* b) {
     if (!a || !b || a == b) {
         return nullptr;
@@ -147,6 +162,7 @@ Branch* Circuit::connect(Port* a, Port* b) {
     return branch;
 }
 
+// 断开指定端口的所有连接
 void Circuit::disconnect(Port* port) {
     if (!port) {
         return;
@@ -154,6 +170,7 @@ void Circuit::disconnect(Port* port) {
 
     const int componentId = port->getParent() ? port->getParent()->getId() : -1;
     const int portIndex = port->getIndex();
+    // 删除与该端口关联的所有支路
     branches_.erase(std::remove_if(branches_.begin(), branches_.end(),
                                    [componentId, portIndex](Branch* branch) {
                                        if (!branch) {
@@ -176,11 +193,13 @@ void Circuit::disconnect(Port* port) {
     solved_ = false;
 }
 
+// 构建连接图：根据支路关系建立节点和端口连接
 void Circuit::buildConnectivityGraph() {
     std::vector<Port*> allPorts;
     std::map<PortKey, size_t> portIndices;
     std::map<PortKey, Port*> referencedPorts;
 
+    // 收集所有被支路引用的端口
     for (const auto* branch : branches_) {
         if (!branch) {
             continue;
@@ -203,6 +222,7 @@ void Circuit::buildConnectivityGraph() {
         }
     }
 
+    // 断开所有元器件的端口连接
     for (const auto& [id, comp] : components_) {
         if (!comp) {
             continue;
@@ -215,6 +235,7 @@ void Circuit::buildConnectivityGraph() {
         }
     }
 
+    // 建立端口到索引的映射
     for (const auto& [key, port] : referencedPorts) {
         if (!port) {
             continue;
@@ -223,6 +244,7 @@ void Circuit::buildConnectivityGraph() {
         allPorts.push_back(port);
     }
 
+    // 清空旧节点
     for (auto* node : nodes_) {
         delete node;
     }
@@ -238,6 +260,7 @@ void Circuit::buildConnectivityGraph() {
         return;
     }
 
+    // 使用并查集将连通的端口归为同一节点
     UnionFind uf(static_cast<int>(allPorts.size()));
     auto lookupPort = [&portIndices](const Branch* branch, bool start) -> int {
         if (!branch) {
@@ -261,6 +284,7 @@ void Circuit::buildConnectivityGraph() {
         }
     }
 
+    // 为每个连通分量创建节点
     std::map<int, Node*> rootToNode;
     for (size_t i = 0; i < allPorts.size(); ++i) {
         const int root = uf.find(static_cast<int>(i));
@@ -276,6 +300,7 @@ void Circuit::buildConnectivityGraph() {
         allPorts[i]->connectTo(node);
     }
 
+    // 更新支路的节点引用
     for (auto* branch : branches_) {
         if (!branch) {
             continue;
@@ -291,6 +316,7 @@ void Circuit::buildConnectivityGraph() {
     }
 }
 
+// 执行电路仿真
 bool Circuit::solve() {
     if (components_.empty()) {
         lastError_ = "No components in circuit";
@@ -298,6 +324,7 @@ bool Circuit::solve() {
         return false;
     }
 
+    // 检查是否有有效的连接
     bool hasConnections = false;
     for (const auto& [id, comp] : components_) {
         const auto ports = comp->getPorts();
@@ -323,6 +350,7 @@ bool Circuit::solve() {
     return result;
 }
 
+// 获取所有元器件的仿真结果
 std::vector<SimulationResult> Circuit::getResults() const {
     std::vector<SimulationResult> results;
     results.reserve(components_.size());
@@ -345,6 +373,7 @@ std::vector<SimulationResult> Circuit::getResults() const {
     return results;
 }
 
+// 按ID查询仿真结果
 SimulationResult Circuit::queryById(int id) const {
     for (const auto& result : getResults()) {
         if (result.componentId == id) {
@@ -354,6 +383,7 @@ SimulationResult Circuit::queryById(int id) const {
     return {};
 }
 
+// 按类型查询仿真结果
 std::vector<SimulationResult> Circuit::queryByType(const std::string& type) const {
     std::vector<SimulationResult> filtered;
     for (const auto& result : getResults()) {
@@ -364,16 +394,19 @@ std::vector<SimulationResult> Circuit::queryByType(const std::string& type) cons
     return filtered;
 }
 
+// 判断电路是否有效（至少有一个元器件）
 bool Circuit::isValid() const {
     return !components_.empty();
 }
 
+// 设置ID计数器（反序列化时使用）
 void Circuit::setIdCounters(int nextComponentId, int nextNodeId, int nextBranchId) {
     nextComponentId_ = std::max(1, nextComponentId);
     nextNodeId_ = std::max(1, nextNodeId);
     nextBranchId_ = std::max(1, nextBranchId);
 }
 
+// 清空电路所有内容
 void Circuit::clear() {
     for (auto& [id, comp] : components_) {
         delete comp;
@@ -398,10 +431,12 @@ void Circuit::clear() {
     lastError_.clear();
 }
 
+// 将电路序列化为JSON字符串
 std::string Circuit::toJson() const {
     return CircuitJsonSerializer::serializeToJson(*this).dump(4);
 }
 
+// 从JSON字符串恢复电路
 bool Circuit::fromJson(const std::string& jsonStr) {
     try {
         const auto j = json::parse(jsonStr);
@@ -412,14 +447,17 @@ bool Circuit::fromJson(const std::string& jsonStr) {
     }
 }
 
+// 保存电路到JSON文件
 bool Circuit::saveToJsonFile(const std::string& file_path) {
     return CircuitJsonSerializer::saveToJsonFile(*this, file_path);
 }
 
+// 从JSON文件加载电路
 bool Circuit::loadFromJsonFile(const std::string& file_path) {
     return CircuitJsonSerializer::loadFromJsonFile(file_path, *this);
 }
 
+// 获取指定节点的电压
 double Circuit::getNodeVoltage(int nodeId) const {
     for (auto* node : nodes_) {
         if (node && node->getId() == nodeId) {
@@ -429,10 +467,12 @@ double Circuit::getNodeVoltage(int nodeId) const {
     return 0.0;
 }
 
+// 记录本次仿真到日志
 void Circuit::logSimulation(const std::string& description) const {
     SimulationLogger::getInstance().logSimulation(getResults(), description);
 }
 
+// 验证电路合法性，返回错误和警告列表
 std::vector<std::string> Circuit::validateCircuit() const {
     std::vector<std::string> errors;
     auto result = CircuitValidator::validate(components_, nodes_);

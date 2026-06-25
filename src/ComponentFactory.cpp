@@ -11,6 +11,7 @@
 
 namespace CircuitSim {
 
+// 获取单例实例（首次调用时注册内置类型）
 ComponentFactory& ComponentFactory::getInstance() {
     static ComponentFactory instance;
     static bool initialized = false;
@@ -21,14 +22,17 @@ ComponentFactory& ComponentFactory::getInstance() {
     return instance;
 }
 
+// 注册新的元器件类型和对应的创建函数
 void ComponentFactory::registerType(const std::string& typeName, Creator creator) {
     creators_[typeName] = std::move(creator);
 }
 
+// 检查指定类型是否已注册
 bool ComponentFactory::isTypeRegistered(const std::string& typeName) const {
     return creators_.find(typeName) != creators_.end();
 }
 
+// 根据类型名称创建对应的元器件实例
 Component* ComponentFactory::create(const std::string& typeName, int id, double x, double y) {
     auto it = creators_.find(typeName);
     if (it != creators_.end()) {
@@ -37,6 +41,7 @@ Component* ComponentFactory::create(const std::string& typeName, int id, double 
     return nullptr;
 }
 
+// 将枚举类型转换为字符串名称
 std::string ComponentFactory::typeToString(ComponentType type) {
     switch (type) {
         case ComponentType::RESISTOR: return "Resistor";
@@ -51,6 +56,7 @@ std::string ComponentFactory::typeToString(ComponentType type) {
     }
 }
 
+// 将字符串名称转换为枚举类型（默认返回电阻）
 ComponentType ComponentFactory::stringToType(const std::string& str) {
     if (str == "Resistor") return ComponentType::RESISTOR;
     if (str == "PowerSource") return ComponentType::POWER_SOURCE;
@@ -63,6 +69,7 @@ ComponentType ComponentFactory::stringToType(const std::string& str) {
     return ComponentType::RESISTOR;
 }
 
+// 注册所有内置元器件类型的创建函数
 void ComponentFactory::registerBuiltInTypes() {
     if (!creators_.empty()) {
         return;
@@ -78,6 +85,7 @@ void ComponentFactory::registerBuiltInTypes() {
     registerType("Inductor", [](int id, double x, double y) { return new Inductor(id, x, y); });
 }
 
+// 获取所有已注册的类型名称列表
 std::vector<std::string> ComponentFactory::getRegisteredTypes() {
     std::vector<std::string> types;
     for (const auto& pair : getInstance().creators_) {

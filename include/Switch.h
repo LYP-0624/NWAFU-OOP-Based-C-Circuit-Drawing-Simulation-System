@@ -5,11 +5,12 @@
 
 namespace CircuitSim {
 
+// 开关元件
 class Switch : public Component {
 private:
-    bool isOn_;
-    double resistanceOn_;
-    double resistanceOff_;
+    bool isOn_;          // 开关状态(闭合/断开)
+    double resistanceOn_;  // 闭合电阻(Ω)
+    double resistanceOff_; // 断开电阻(Ω)
 
 public:
     Switch(int id, double x, double y, bool isOn = false);

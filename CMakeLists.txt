@@ -12,7 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Gui Core)
 
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/third_party/nlohmann
+    ${CMAKE_SOURCE_DIR}/lib/nlohmann
     ${CMAKE_SOURCE_DIR}/Serialize
     ${CMAKE_SOURCE_DIR}/UI
 )
@@ -40,7 +40,7 @@ set(SOURCES
     src/Branch.cpp
     src/ComponentFactory.cpp
     src/CircuitValidator.cpp
-    src/SimulationLogger.cpp
+    Serialize/SimulationLogger.cpp
     Serialize/CircuitJsonSerializer.cpp
     Serialize/CircuitFileValidator.cpp
 )
@@ -69,8 +69,8 @@ set(HEADERS
     include/ComponentFactory.h
     include/CircuitValidator.h
     include/CircuitException.h
-    include/SimulationLogger.h
     include/SimulationResult.h
+    Serialize/SimulationLogger.h
     Serialize/CircuitJsonSerializer.h
     Serialize/CircuitFileValidator.h
 )

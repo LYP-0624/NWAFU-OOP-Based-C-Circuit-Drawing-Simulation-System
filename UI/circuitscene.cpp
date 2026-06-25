@@ -10,6 +10,7 @@
 
 namespace {
 
+// 将工具类型枚举转换为元器件类型字符串
 QString typeToSceneTool(CircuitScene::Tool tool) {
     switch (tool) {
         case CircuitScene::Tool::Resistor: return "Resistor";
@@ -26,6 +27,7 @@ QString typeToSceneTool(CircuitScene::Tool tool) {
 
 } // namespace
 
+// 构造函数：初始化场景、工具状态和连线预览
 CircuitScene::CircuitScene(QObject* parent)
     : QGraphicsScene(parent),
       m_circuit(nullptr),
@@ -33,19 +35,22 @@ CircuitScene::CircuitScene(QObject* parent)
       m_wireStartItem(nullptr),
       m_wireStartPort(-1),
       m_previewWire(nullptr) {
-    setSceneRect(-700, -500, 1400, 1000);
+    setSceneRect(-700, -500, 1400, 1000);  // 设置场景显示区域
 }
 
+// 绑定电路模型到场景
 void CircuitScene::setCircuit(CircuitSim::Circuit* circuit) {
     m_circuit = circuit;
     GraphComponent::setCircuit(circuit);
 }
 
+// 取消当前放置模式，重置工具状态
 void CircuitScene::cancelPlacementMode() {
     cancelWireDrag();
     m_tool = Tool::Select;
 }
 
+// 根据电路元器件创建对应的图形项
 GraphComponent* CircuitScene::createComponentItem(CircuitSim::Component* component) {
     if (!component) {
         return nullptr;
@@ -88,6 +93,7 @@ GraphComponent* CircuitScene::createComponentItem(CircuitSim::Component* compone
     return item;
 }
 
+// 根据电路支路创建对应的连线图形项
 void CircuitScene::createWireFromBranch(const CircuitSim::Branch* branch) {
     if (!branch || !branch->getStartComponent() || !branch->getEndComponent()) {
         return;
@@ -104,6 +110,7 @@ void CircuitScene::createWireFromBranch(const CircuitSim::Branch* branch) {
     m_wireItems.insert(branch->getId(), wire);
 }
 
+// 从电路模型同步所有图形项（清空后重建）
 void CircuitScene::syncFromCircuit() {
     clear();
     m_componentItems.clear();
@@ -126,6 +133,7 @@ void CircuitScene::syncFromCircuit() {
     }
 }
 
+// 刷新所有图形项的显示状态
 void CircuitScene::refreshVisuals() {
     for (auto* item : m_componentItems) {
         if (item) {
@@ -140,11 +148,13 @@ void CircuitScene::refreshVisuals() {
     update();
 }
 
+// 根据元器件ID获取对应的图形项
 GraphComponent* CircuitScene::componentItem(int componentId) const {
     auto it = m_componentItems.find(componentId);
     return it == m_componentItems.end() ? nullptr : it.value();
 }
 
+// 获取指定位置处的元器件图形项及其端口索引
 GraphComponent* CircuitScene::componentAt(const QPointF& scenePos, int* terminal) const {
     const QList<QGraphicsItem*> hits = items(scenePos);
     for (QGraphicsItem* raw : hits) {
@@ -160,6 +170,7 @@ GraphComponent* CircuitScene::componentAt(const QPointF& scenePos, int* terminal
     return nullptr;
 }
 
+// 开始拖拽连线：记录起始元器件和端口，创建预览线
 void CircuitScene::beginWireDrag(GraphComponent* component, int terminal, const QPointF& scenePos) {
     if (!component || terminal < 0) {
         return;
@@ -172,6 +183,7 @@ void CircuitScene::beginWireDrag(GraphComponent* component, int terminal, const 
     addItem(m_previewWire);
 }
 
+// 结束拖拽连线：查找目标端口并创建实际支路连接
 void CircuitScene::finishWireDrag(const QPointF& scenePos) {
     if (!m_wireStartItem || m_wireStartPort < 0) {
         cancelWireDrag();
@@ -202,6 +214,7 @@ void CircuitScene::finishWireDrag(const QPointF& scenePos) {
     cancelWireDrag();
 }
 
+// 取消当前连线拖拽，清除预览线
 void CircuitScene::cancelWireDrag() {
     if (m_previewWire) {
         removeItem(m_previewWire);
@@ -212,6 +225,7 @@ void CircuitScene::cancelWireDrag() {
     m_wireStartPort = -1;
 }
 
+// 在指定位置放置当前选中的元器件类型
 void CircuitScene::placeComponentAt(const QPointF& scenePos) {
     if (!m_circuit) {
         return;
@@ -234,6 +248,7 @@ void CircuitScene::placeComponentAt(const QPointF& scenePos) {
     m_tool = Tool::Select;
 }
 
+// 删除所有选中的图形项（包括连线和元器件）
 void CircuitScene::deleteSelectedItems() {
     const auto selected = selectedItems();
     QSet<int> selectedWireIds;
@@ -260,6 +275,7 @@ void CircuitScene::deleteSelectedItems() {
     }
 }
 
+// 移除连线图形项并从电路模型删除对应支路
 void CircuitScene::removeWireItem(WireItem* wire) {
     if (!wire) {
         return;
@@ -274,6 +290,7 @@ void CircuitScene::removeWireItem(WireItem* wire) {
     delete wire;
 }
 
+// 移除元器件图形项并从电路模型删除，同时清理关联连线
 void CircuitScene::removeComponentItem(GraphComponent* component) {
     if (!component) {
         return;
@@ -283,6 +300,7 @@ void CircuitScene::removeComponentItem(GraphComponent* component) {
         m_circuit->removeComponent(component->id());
     }
 
+    // 收集并删除与该元器件相连的所有连线
     QList<WireItem*> attached;
     for (auto* wire : m_wireItems) {
         if (wire && (wire->startItem() == component || wire->endItem() == component)) {
@@ -298,6 +316,7 @@ void CircuitScene::removeComponentItem(GraphComponent* component) {
     delete component;
 }
 
+// 鼠标按下事件处理：右键取消，左键开始连线或放置元器件
 void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent* event) {
     if (event->button() == Qt::RightButton) {
         cancelPlacementMode();
@@ -324,6 +343,7 @@ void CircuitScene::mousePressEvent(QGraphicsSceneMouseEvent* event) {
     QGraphicsScene::mousePressEvent(event);
 }
 
+// 鼠标移动事件处理：更新连线预览终点位置
 void CircuitScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event) {
     if (m_previewWire) {
         m_previewWire->setEndPoint(event->scenePos());
@@ -334,6 +354,7 @@ void CircuitScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event) {
     QGraphicsScene::mouseMoveEvent(event);
 }
 
+// 鼠标释放事件处理：左键释放时完成连线
 void CircuitScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event) {
     if (m_previewWire && event->button() == Qt::LeftButton) {
         finishWireDrag(event->scenePos());

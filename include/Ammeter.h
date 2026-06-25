@@ -5,9 +5,10 @@
 
 namespace CircuitSim {
 
+// 电流表元件
 class Ammeter : public Component {
 private:
-    double reading_;
+    double reading_;  // 读数(A)
 
 public:
     Ammeter(int id, double x, double y);

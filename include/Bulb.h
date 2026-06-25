@@ -5,13 +5,14 @@
 
 namespace CircuitSim {
 
+// 灯泡元件
 class Bulb : public Component {
 private:
-    double resistance_;
-    double ratedPower_;
-    double current_;
-    double voltage_;
-    bool isLit_;
+    double resistance_;  // 电阻值(Ω)
+    double ratedPower_;  // 额定功率(W)
+    double current_;     // 电流值(A)
+    double voltage_;     // 电压值(V)
+    bool isLit_;         // 是否点亮
 
 public:
     Bulb(int id, double x, double y, double resistance = 10.0, double ratedPower = 0.5);

@@ -19,6 +19,7 @@ namespace CircuitSim {
 
 namespace {
 
+// 按ID排序元件
 std::vector<const Component*> orderedComponents(const std::unordered_map<int, Component*>& components) {
     std::vector<const Component*> ordered;
     ordered.reserve(components.size());
@@ -31,6 +32,7 @@ std::vector<const Component*> orderedComponents(const std::unordered_map<int, Co
     return ordered;
 }
 
+// 获取元件等效电阻
 double componentResistance(const Component* comp) {
     switch (comp->getType()) {
         case ComponentType::RESISTOR:
@@ -38,17 +40,17 @@ double componentResistance(const Component* comp) {
         case ComponentType::BULB:
             return std::max(1e-12, static_cast<const Bulb*>(comp)->getResistance());
         case ComponentType::AMMETER:
-            return 1e-3;
+            return 1e-3;  // 电流表内阻
         case ComponentType::VOLTMETER:
-            return 1e9;
+            return 1e9;   // 电压表内阻
         case ComponentType::SWITCH:
             return static_cast<const Switch*>(comp)->isOn()
                 ? std::max(1e-12, static_cast<const Switch*>(comp)->getResistanceOn())
                 : std::max(1e-12, static_cast<const Switch*>(comp)->getResistanceOff());
         case ComponentType::CAPACITOR:
-            return 1e12;
+            return 1e12;  // 电容直流开路
         case ComponentType::INDUCTOR:
-            return 1e-6;
+            return 1e-6;  // 电感直流短路近似
         case ComponentType::POWER_SOURCE:
             return 0.0;
         default:
@@ -63,11 +65,13 @@ MNASolver::MNASolver()
 
 MNASolver::~MNASolver() = default;
 
+// 建立节点编号映射
 void MNASolver::buildNodeIndexMap(const std::vector<Node*>& nodes) {
     nodeToIndex_.clear();
     nodeOrder_.clear();
     groundNode_ = nullptr;
 
+    // 查找地节点
     for (auto* node : nodes) {
         if (node && node->isGround()) {
             groundNode_ = node;
@@ -75,10 +79,12 @@ void MNASolver::buildNodeIndexMap(const std::vector<Node*>& nodes) {
         }
     }
 
+    // 如果没有地节点，使用第一个节点作为参考节点
     if (!groundNode_ && !nodes.empty()) {
         groundNode_ = nodes.front();
     }
 
+    // 为非地节点分配矩阵索引
     int idx = 0;
     for (auto* node : nodes) {
         if (!node || node == groundNode_) {
@@ -91,6 +97,7 @@ void MNASolver::buildNodeIndexMap(const std::vector<Node*>& nodes) {
     numNodes_ = idx;
 }
 
+// 电导模板
 void MNASolver::stampConductance(int n1, int n2, double g) {
     if (g == 0.0) {
         return;
@@ -113,6 +120,7 @@ void MNASolver::stampResistor(int n1, int n2, double conductance) {
     stampConductance(n1, n2, conductance);
 }
 
+// 电压源模板(KCL约束)
 void MNASolver::stampVoltageSource(int n1, int n2, int vsIdx, double voltage) {
     const int row = numNodes_ + vsIdx;
 
@@ -128,6 +136,7 @@ void MNASolver::stampVoltageSource(int n1, int n2, int vsIdx, double voltage) {
     vectorB_[row] += voltage;
 }
 
+// 电流源模板
 void MNASolver::stampCurrentSource(int n1, int n2, double current) {
     if (n1 >= 0) {
         vectorB_[n1] -= current;
@@ -143,10 +152,12 @@ void MNASolver::stampCurrentInjection(int node, double current) {
     }
 }
 
+// 构建导纳矩阵
 bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& components,
                                const std::vector<Node*>& nodes) {
     buildNodeIndexMap(nodes);
 
+    // 收集电压源
     voltageSourceOrder_.clear();
     const auto ordered = orderedComponents(components);
     for (const Component* comp : ordered) {
@@ -165,10 +176,12 @@ bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& compon
         return false;
     }
 
+    // 初始化矩阵和向量
     matrixA_.assign(matrixSize_, std::vector<double>(matrixSize_, 0.0));
     vectorB_.assign(matrixSize_, 0.0);
     solutionX_.assign(matrixSize_, 0.0);
 
+    // 遍历所有元件并添加到矩阵
     int vsIdx = 0;
     for (const Component* comp : ordered) {
         const auto ports = comp->getPorts();
@@ -176,6 +189,7 @@ bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& compon
             continue;
         }
 
+        // 获取端口对应的节点索引
         auto nodeIndexOf = [this](const Port* port) -> int {
             if (!port || !port->isConnected() || !port->getNode()) {
                 return -1;
@@ -190,6 +204,7 @@ bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& compon
         const int n1 = nodeIndexOf(ports[0]);
         const int n2 = nodeIndexOf(ports[1]);
 
+        // 根据元件类型进行模板处理
         switch (comp->getType()) {
             case ComponentType::RESISTOR:
             case ComponentType::BULB:
@@ -218,6 +233,7 @@ bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& compon
         }
     }
 
+    // 添加微小电导防止矩阵奇异
     if (numNodes_ > 0) {
         matrixA_[0][0] += 1e-12;
     }
@@ -225,16 +241,20 @@ bool MNASolver::assembleMatrix(const std::unordered_map<int, Component*>& compon
     return true;
 }
 
+// 提取计算结果
 void MNASolver::extractResults(const std::unordered_map<int, Component*>& components,
                                const std::vector<Node*>& nodes) {
+    // 地节点电压设为0
     if (groundNode_) {
         groundNode_->setVoltage(0.0);
     }
 
+    // 设置各节点电压
     for (size_t i = 0; i < nodeOrder_.size() && i < solutionX_.size(); ++i) {
         nodeOrder_[i]->setVoltage(solutionX_[i]);
     }
 
+    // 计算各元件的电压和电流
     const auto ordered = orderedComponents(components);
     int sourceIndex = 0;
     for (const Component* comp : ordered) {
@@ -242,10 +262,12 @@ void MNASolver::extractResults(const std::unordered_map<int, Component*>& compon
         double voltage = 0.0;
         double current = 0.0;
 
+        // 计算元件两端电压
         if (ports.size() >= 2 && ports[0] && ports[1] && ports[0]->isConnected() && ports[1]->isConnected()) {
             voltage = ports[0]->getVoltage() - ports[1]->getVoltage();
         }
 
+        // 根据元件类型计算电流
         switch (comp->getType()) {
             case ComponentType::RESISTOR: {
                 const double r = std::max(1e-12, static_cast<const Resistor*>(comp)->getResistance());
@@ -283,6 +305,7 @@ void MNASolver::extractResults(const std::unordered_map<int, Component*>& compon
             case ComponentType::POWER_SOURCE: {
                 const auto* source = static_cast<const PowerSource*>(comp);
                 if (source->isVoltageSource()) {
+                    // 电压源电流从解向量获取
                     if (sourceIndex < numVoltageSources_) {
                         current = solutionX_[numNodes_ + sourceIndex];
                     }
@@ -296,10 +319,12 @@ void MNASolver::extractResults(const std::unordered_map<int, Component*>& compon
                 break;
         }
 
+        // 更新元件仿真结果
         const_cast<Component*>(comp)->simulate(voltage, current);
     }
 }
 
+// 执行MNA求解
 bool MNASolver::solve(const std::unordered_map<int, Component*>& components,
                       const std::vector<Node*>& nodes) {
     if (components.empty()) {
@@ -311,12 +336,14 @@ bool MNASolver::solve(const std::unordered_map<int, Component*>& components,
         return false;
     }
 
+    // 验证电路
     std::string errorMsg;
     if (!validateCircuit(components, nodes, errorMsg)) {
         lastError_ = errorMsg;
         return false;
     }
 
+    // 构建矩阵
     if (!assembleMatrix(components, nodes)) {
         if (lastError_.empty()) {
             lastError_ = "Matrix assembly failed";
@@ -324,12 +351,14 @@ bool MNASolver::solve(const std::unordered_map<int, Component*>& components,
         return false;
     }
 
+    // 求解线性方程组
     SolverStats stats;
     if (!LinearSolver::solveWithStats(matrixA_, vectorB_, solutionX_, stats)) {
         lastError_ = stats.errorMessage.empty() ? "Linear solve failed" : stats.errorMessage;
         return false;
     }
 
+    // 提取结果
     extractResults(components, nodes);
     lastError_.clear();
     return true;
@@ -349,6 +378,7 @@ double MNASolver::getVoltageSourceCurrent(int vsIdx) const {
     return 0.0;
 }
 
+// 验证电路是否可求解
 bool MNASolver::validateCircuit(const std::unordered_map<int, Component*>& components,
                                 const std::vector<Node*>& nodes,
                                 std::string& errorMsg) {
@@ -361,6 +391,7 @@ bool MNASolver::validateCircuit(const std::unordered_map<int, Component*>& compo
         return false;
     }
 
+    // 检查是否有电源
     bool hasSource = false;
     for (const auto& [id, comp] : components) {
         if (comp->getType() == ComponentType::POWER_SOURCE) {
@@ -373,6 +404,7 @@ bool MNASolver::validateCircuit(const std::unordered_map<int, Component*>& compo
         return false;
     }
 
+    // 检查所有元件是否正确连接
     for (const auto& [id, comp] : components) {
         const auto ports = comp->getPorts();
         if (ports.size() < 2 || !ports[0] || !ports[1] || !ports[0]->isConnected() || !ports[1]->isConnected()) {
